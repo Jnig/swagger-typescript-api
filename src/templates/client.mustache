@@ -1,98 +1,21 @@
+import axios, { AxiosRequestConfig } from 'axios';
 
-export type RequestParams = Omit<RequestInit, "body" | "method"> & {
-  secure?: boolean;
-}
+export default class AxiosClient {
+  // eslint-disable-next-line class-methods-use-this
+  public async request<T = any, E = any>(config: AxiosRequestConfig): Promise<any> {
+    config.url = `/api/${config.url}`;
 
-{{#hasQueryRoutes}}
-export type RequestQueryParamsType = Record<string, string | string[] | number | number[] | boolean | undefined>;
-{{/hasQueryRoutes}}
+    if(config.data && config.data === null) {
+      config.data = {};
+    }
 
-type ApiConfig<{{#apiConfig.generic}}{{name}},{{/apiConfig.generic}}> = {
-{{#apiConfig.props}}
-  {{name}}{{#optional}}?{{/optional}}: {{type}},
-{{/apiConfig.props}}
-}
-
-{{#generateResponses}}
-/** Overrided Promise type. Needs for additional typings of `.catch` callback */
-type TPromise<ResolveType, RejectType = any> = Omit<Promise<ResolveType>, "then" | "catch"> & {
-  then<TResult1 = ResolveType, TResult2 = never>(onfulfilled?: ((value: ResolveType) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: RejectType) => TResult2 | PromiseLike<TResult2>) | undefined | null): TPromise<TResult1 | TResult2, RejectType>;
-  catch<TResult = never>(onrejected?: ((reason: RejectType) => TResult | PromiseLike<TResult>) | undefined | null): TPromise<ResolveType | TResult, RejectType>;
-}
-{{/generateResponses}}
-
-
-class HttpClient<{{#apiConfig.generic}}{{name}},{{/apiConfig.generic}}> {
-  public baseUrl: string = "{{apiConfig.baseUrl}}";
-  private securityData: SecurityDataType = (null as any);
-  private securityWorker: ApiConfig<{{#apiConfig.generic}}{{name}},{{/apiConfig.generic}}>["securityWorker"] = (() => {}) as any
-  
-  private baseApiParams: RequestParams = {
-    credentials: 'same-origin',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    redirect: 'follow',
-    referrerPolicy: 'no-referrer',
-  }
-
-  constructor({ {{#apiConfig.props}}{{name}},{{/apiConfig.props}} }: ApiConfig<{{#apiConfig.generic}}{{name}},{{/apiConfig.generic}}> = {}) {
-  {{#apiConfig.props}}
-    this.{{name}} = {{name}} || this.{{name}};
-  {{/apiConfig.props}}
-  }
-
-  public setSecurityData = (data: SecurityDataType) => {
-    this.securityData = data
-  }
-
-  {{#hasQueryRoutes}}
-  private addQueryParam(query: RequestQueryParamsType, key: string) {
-    return encodeURIComponent(key) + "=" + encodeURIComponent(Array.isArray(query[key]) ? (query[key] as any).join(",") : query[key])
-  }
-
-  protected addQueryParams(query?: RequestQueryParamsType): string {
-    const fixedQuery = query || {};
-    const keys = Object.keys(fixedQuery).filter(key => "undefined" !== typeof fixedQuery[key]);
-    return keys.length === 0 ? "" : `?${keys.map(key => this.addQueryParam(fixedQuery, key)).join("&")}`;
-  }
-  {{/hasQueryRoutes}}
-
-  private mergeRequestOptions(params: RequestParams, securityParams?: RequestParams): RequestParams {
-    return {
-      ...this.baseApiParams,
-      ...params,
-      ...(securityParams || {}),
-      headers: {
-        ...(this.baseApiParams.headers || {}),
-        ...(params.headers || {}),
-        ...((securityParams && securityParams.headers) || {})
-      }
+    try {
+      const { data }= await axios.request(config);
+      return data;
+    } catch (err) {
+      throw err;
     }
   }
-  
-  private safeParseResponse = <T = any, E = any>(response: Response): {{#generateResponses}}TPromise<T, E>{{/generateResponses}}{{^generateResponses}}Promise<T>{{/generateResponses}} =>
-    response.json()
-      .then(data => data)
-      .catch(e => response.text);
-  
-  public request = <T = any, E = any>(
-    path: string,
-    method: string,
-    { secure, ...params }: RequestParams = {},
-    body?: any,
-    secureByDefault?: boolean,
-  ): {{#generateResponses}}TPromise<T, E>{{/generateResponses}}{{^generateResponses}}Promise<T>{{/generateResponses}} =>
-    fetch(`${this.baseUrl}${path}`, {
-      // @ts-ignore
-      ...this.mergeRequestOptions(params, (secureByDefault || secure) && this.securityWorker(this.securityData)),
-      method,
-      body: body ? JSON.stringify(body) : null,
-    }).then(async response => {
-      const data = await this.safeParseResponse<T, E>(response);
-      if (!response.ok) throw data
-      return data
-    })
 }
 
 {{#apiConfig.hasDescription}}
@@ -102,7 +25,7 @@ class HttpClient<{{#apiConfig.generic}}{{name}},{{/apiConfig.generic}}> {
 {{/apiConfig.description}}
  */
 {{/apiConfig.hasDescription}}
-export class Api<{{#apiConfig.generic}}{{name}}{{#defaultValue}} = {{.}}{{/defaultValue}},{{/apiConfig.generic}}> extends HttpClient<{{#apiConfig.generic}}{{name}},{{/apiConfig.generic}}>{
+export class Api<{{#apiConfig.generic}}{{name}}{{#defaultValue}} = {{.}}{{/defaultValue}},{{/apiConfig.generic}}> extends AxiosClient{
 {{#routes}}
 
   {{#outOfModule}}
@@ -114,7 +37,7 @@ export class Api<{{#apiConfig.generic}}{{name}}{{#defaultValue}} = {{.}}{{/defau
   {{/comments}}
    */
   {{name}} = ({{#routeArgs}}{{name}}{{#optional}}?{{/optional}}: {{type}}, {{/routeArgs}}) =>
-    this.request<{{returnType}}, {{errorReturnType}}>(`{{path}}{{#hasQuery}}${this.addQueryParams({{#specificArgs.query}}{{name}}{{/specificArgs.query}})}{{/hasQuery}}`, "{{method}}", {{#specificArgs.requestParams}}{{name}}{{/specificArgs.requestParams}}, {{#bodyArg}}{{.}}{{#security}}, {{/security}}{{/bodyArg}}{{#security}}true{{/security}})
+    this.request<{{returnType}}, {{errorReturnType}}>({...config, url: `{{path}}`, method: "{{method}}" {{#bodyArg}}, data: {{.}}{{/bodyArg}} {{#hasQuery}}, params: query{{/hasQuery}}}),
   {{/outOfModule}}
 
   {{#combined}}
@@ -128,7 +51,7 @@ export class Api<{{#apiConfig.generic}}{{name}}{{#defaultValue}} = {{.}}{{/defau
     {{/comments}}
      */
     {{name}}: ({{#routeArgs}}{{name}}{{#optional}}?{{/optional}}: {{type}}, {{/routeArgs}}) =>
-      this.request<{{returnType}}, {{errorReturnType}}>(`{{path}}{{#hasQuery}}${this.addQueryParams({{#specificArgs.query}}{{name}}{{/specificArgs.query}})}{{/hasQuery}}`, "{{method}}", {{#specificArgs.requestParams}}{{name}}{{/specificArgs.requestParams}}, {{#bodyArg}}{{.}}{{#security}}, {{/security}}{{/bodyArg}}{{#security}}true{{/security}}),
+      this.request<{{returnType}}, {{errorReturnType}}>({...config, url: `{{path}}`, method: "{{method}}" {{#bodyArg}}, data: {{.}}{{/bodyArg}} {{#hasQuery}}, params: query{{/hasQuery}}}),
     {{/routes}}
   }
   {{/combined}}

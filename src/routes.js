@@ -256,18 +256,16 @@ const parseRoutes = ({ paths }, parsedSchemas) =>
             : void 0,
           body: bodyType
             ? {
-                name: bodyParamName,
+                name: `${bodyParamName}`,
                 optional:
                   typeof requestBody.required === "undefined" ? false : !requestBody.required,
                 type: bodyType,
               }
             : void 0,
           requestParams: {
-            name: pathArgs.some((pathArg) => pathArg.name === "params")
-              ? "requestParams"
-              : "params",
+            name: pathArgs.some((pathArg) => pathArg.name === "params") ? "config" : "config",
             optional: true,
-            type: "RequestParams",
+            type: "AxiosRequestConfig",
           },
         };
 

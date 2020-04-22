@@ -199,6 +199,10 @@ const checkAndFixSchema = (schema) => {
 const parseSchema = (rawSchema, typeName, formattersMap) => {
   if (!rawSchema) return schemaParsers.primitive(null, typeName);
 
+  if (rawSchema.type && rawSchema.type.length && rawSchema.type.includes("null")) {
+    rawSchema = rawSchema.type.filter((x) => x !== "null");
+  }
+
   let schemaType = null;
   let parsedSchema = null;
 
