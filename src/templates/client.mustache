@@ -3,7 +3,7 @@ import axios, { AxiosRequestConfig } from 'axios';
 export default class AxiosClient {
   // eslint-disable-next-line class-methods-use-this
   public async request<T = any, E = any>(config: AxiosRequestConfig): Promise<any> {
-    config.url = `/api/${config.url}`;
+    config.url = `/api${config.url}`;
 
     if(config.data && config.data === null) {
       config.data = {};
@@ -13,6 +13,7 @@ export default class AxiosClient {
       const { data }= await axios.request(config);
       return data;
     } catch (err) {
+      console.log(err.response.data);
       throw err;
     }
   }
