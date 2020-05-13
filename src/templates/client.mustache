@@ -1,6 +1,8 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios, { AxiosRequestConfig, AxiosInstance } from 'axios';
 
 export default class AxiosClient {
+  protected instance!: AxiosInstance;
+  
   // eslint-disable-next-line class-methods-use-this
   public async request<T = any, E = any>(config: AxiosRequestConfig): Promise<any> {
     config.url = `/api${config.url}`;
@@ -26,7 +28,13 @@ export default class AxiosClient {
 {{/apiConfig.description}}
  */
 {{/apiConfig.hasDescription}}
-export class Api<{{#apiConfig.generic}}{{name}}{{#defaultValue}} = {{.}}{{/defaultValue}},{{/apiConfig.generic}}> extends AxiosClient{
+export class Api extends AxiosClient{
+  constructor(axios: AxiosInstance) {
+    super();
+
+    this.instance = axios;
+  }
+
 {{#routes}}
 
   {{#outOfModule}}
