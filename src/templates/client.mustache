@@ -12,12 +12,12 @@ export default class AxiosClient {
     }
 
     try {
-      const { data }= await axios.request(config);
+      const { data }= await this.instance.request(config);
       return data;
     } catch (err) {
       const newError: any = new Error('failed request: ' + JSON.stringify(err.response.data));
       newError.data = err.response.data;
-      
+
       throw newError;
     }
   }
