@@ -15,8 +15,10 @@ export default class AxiosClient {
       const { data }= await axios.request(config);
       return data;
     } catch (err) {
-      console.log(err.response.data);
-      throw err;
+      const newError: any = new Error('failed request: ' + JSON.stringify(err.response.data));
+      newError.data = err.response.data;
+      
+      throw newError;
     }
   }
 }
